@@ -50,7 +50,6 @@ def myMQTTPublish(topic,jsonMessage):
 	if len(subtopics) > 0:
 		messageDict = json.loads(jsonMessage)
 		for subtopic in subtopics:
-			print("Publishing:",topic+"/"+subtopic)
 			MQTTClient.publish(topic + "/" + subtopic,messageDict[subtopic],0)
 	if not mqttJSONDisabled:
 		MQTTClient.publish(topic,jsonMessage,1)
@@ -257,27 +256,23 @@ if args.atc:
 					lastAdvNumber = None
 				if lastAdvNumber == None or lastAdvNumber != advNumber:
 					advCounter[macStr] = advNumber
-					print("BLE packet: %s %02x %s (RSSI %d)" % (mac, adv_type, data_str, rssi))
 					global measurements
 					measurement = Measurement(0,0,0,0,0,0,0,0)
 					measurement.timestamp = int(time.time())
 
 
 					temperature = int.from_bytes(bytearray.fromhex(atcData_str[12:16]),byteorder='big',signed=True) / 10.
-					print("Temperature: ", temperature)
 					humidity = int(atcData_str[16:18], 16)
-					print("Humidity: ", humidity)
 					batteryVoltage = int(atcData_str[20:24], 16) / 1000
-					print ("Battery voltage:", batteryVoltage,"V")
-					print ("RSSI:", rssi, "dBm")
 
 					batteryPercent = int(atcData_str[18:20], 16)
-					print ("Battery:", batteryPercent,"%")
 					measurement.battery = batteryPercent
 					measurement.humidity = humidity
 					measurement.temperature = temperature
 					measurement.voltage = batteryVoltage
 					measurement.rssi = rssi
+
+					# print("BLE packet: %s %02x %s (RSSI %d)" % (mac, adv_type, data_str, rssi))
 
 					currentMQTTTopic = MQTTTopic
 					if mac in sensors:
@@ -290,14 +285,14 @@ if args.atc:
 					else:
 						measurement.sensorname = mac
 					
+					print("measurement. name=%s, mac=%s, temperature=%s, humidity=%s, battery=%s%%, rssi=%sdbm" % (measurement.sensorname, mac, temperature, humidity, batteryPercent, rssi))
+
 					if measurement.calibratedHumidity == 0:
 						measurement.calibratedHumidity = measurement.humidity
 
 					if args.mqttconfigfile:
 						jsonString=buildJSONString(measurement)
 						myMQTTPublish(currentMQTTTopic,jsonString)
-
-					print("")	
 
 		if  args.watchdogtimer:
 			keepingLEScanRunningThread = threading.Thread(target=keepingLEScanRunning)
